@@ -1,0 +1,32 @@
+{
+  "mode_names": [
+    "LP01e",
+    "LP02e",
+    "LP11e",
+    "LP11o",
+    "LP21e",
+    "LP21o"
+  ],
+  "mode_weights": [
+    0,
+    1,
+    0,
+    0,
+    0,
+    0
+  ],
+  "mode_phases": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "weight_type": "amplitude",
+  "fiber_core_um": 5.0,
+  "fiber_na": 0.1,
+  "mode_basis_nm": 632.8,
+  "zone_size_um": 100.0,
+  "grid_n": 600
+}

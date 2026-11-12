@@ -1,0 +1,48 @@
+{
+  "id": "basic_shapes",
+  "name": "基本光斑（圆斑/环/涡旋）",
+  "description": "直接给定理想光斑形状，用于编码方式对比、零级抑制与几何标定的快速基准。",
+  "version": "1.0.0",
+  "targetPlane": "camera",
+  "entry": "design.py",
+  "params": [
+    {
+      "key": "shape", "label": "光斑形状", "type": "enum", "default": "ring", "sweepable": true,
+      "options": [
+        { "value": "gauss", "label": "高斯圆斑" },
+        { "value": "ring", "label": "环（LP02 型）" },
+        { "value": "tophat", "label": "平顶圆斑" },
+        { "value": "vortex", "label": "涡旋环（带相位缠绕）" }
+      ],
+      "help": "环与涡旋最能暴露编码与照明问题：暗环落在模糊斑内就会消失。"
+    },
+    {
+      "key": "waist_mm", "label": "高斯半径 w", "type": "number", "group": "设计参数",
+      "default": 0.55, "unit": "mm", "min": 0.05, "max": 6, "step": 0.05,
+      "sweepable": true, "sweep": { "min": 0.3, "max": 1.2, "step": 0.1 },
+      "help": "强度 1/e² 半径；环形状时作为外环半径参考。"
+    },
+    {
+      "key": "ring_radius_mm", "label": "环峰值半径", "type": "number", "group": "设计参数",
+      "default": 1.08, "unit": "mm", "min": 0.05, "max": 6, "step": 0.02,
+      "sweepable": true, "sweep": { "min": 0.6, "max": 1.6, "step": 0.1 },
+      "help": "LP02 外环峰值在 1.08 mm；暗环半径约 0.68 mm。"
+    },
+    {
+      "key": "ring_width_mm", "label": "环宽度", "type": "number", "group": "设计参数",
+      "default": 0.35, "unit": "mm", "min": 0.02, "max": 2, "step": 0.01,
+      "help": "环的高斯宽度（振幅 1/e 半径），越大环越粗。"
+    },
+    {
+      "key": "charge", "label": "涡旋拓扑荷", "type": "int", "group": "设计参数",
+      "default": 1, "unit": "", "min": -5, "max": 5, "step": 1,
+      "help": "仅涡旋形状使用；正负号决定相位缠绕方向。"
+    },
+    {
+      "key": "aperture_mm", "label": "目标口径", "type": "number", "group": "设计参数",
+      "default": 2.5, "unit": "mm", "min": 0.3, "max": 12, "step": 0.1,
+      "sweepable": true, "sweep": { "min": 1.5, "max": 4, "step": 0.25 },
+      "help": "目标场覆盖的物理边长，应略大于光斑本身，避免被硬边切掉。"
+    }
+  ]
+}

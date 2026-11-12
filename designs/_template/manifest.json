@@ -1,0 +1,26 @@
+{
+  "id": "my_pack",
+  "name": "我的设计包",
+  "description": "一句话说明这个包要做什么光（例如：把 MATLAB 的汉字相位掩模搬过来）。",
+  "version": "0.1.0",
+  "author": "",
+  "targetPlane": "camera",
+  "entry": "design.py",
+  "notes": "复制整个 _template 目录为 designs/my_pack 后改这里。",
+  "params": [
+    {
+      "key": "example_waist_mm",
+      "label": "示例参数",
+      "group": "设计参数",
+      "type": "number",
+      "default": 0.5,
+      "unit": "mm",
+      "min": 0.05,
+      "max": 5,
+      "step": 0.05,
+      "sweepable": true,
+      "sweep": { "min": 0.2, "max": 1.2, "step": 0.1 },
+      "help": "这里写这个参数是什么、量级、扫它会发生什么。"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "name": "cgh-toolbox",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "相位型 CGH 设计/仿真/参数扫描的本地网页工具箱",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node backend.mjs",
+    "dev": "node backend.mjs",
+    "selftest": "python scripts/selftest.py full lp_modes",
+    "check": "node scripts/syntax-check.mjs"
+  }
+}

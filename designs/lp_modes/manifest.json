@@ -1,0 +1,62 @@
+{
+  "id": "lp_modes",
+  "name": "LP 模式叠加",
+  "description": "由少量 LP 模式相干叠加出近场目标复场，与数据集的模式基底同源。用于单模/多模光斑验证。",
+  "version": "1.0.0",
+  "author": "",
+  "targetPlane": "camera",
+  "entry": "design.py",
+  "notes": "光场在 zone_size 口径内计算，再按 target_core_diameter 映射到相机平面；改变芯径即可放大光斑。",
+  "params": [
+    {
+      "key": "mode_names", "label": "模式列表", "type": "string_list", "group": "设计参数",
+      "default": ["LP01e", "LP02e", "LP11e", "LP11o", "LP21e", "LP21o"],
+      "help": "逗号分隔，如 LP01e, LP11e。e/o 表示 cos/sin 两种取向；LP01、LP02 只有 e。"
+    },
+    {
+      "key": "mode_weights", "label": "振幅权重", "type": "float_list", "group": "设计参数",
+      "default": [0, 1, 0, 0, 0, 0], "sweepable": false,
+      "help": "与模式列表一一对应；最后按平方和归一化。权重为 0 的模式不参与叠加。"
+    },
+    {
+      "key": "mode_phases", "label": "相位 (rad)", "type": "float_list", "group": "设计参数",
+      "default": [0, 0, 0, 0, 0, 0],
+      "help": "与模式列表一一对应，单位弧度；零振幅模式的相位不影响结果。"
+    },
+    {
+      "key": "weight_type", "label": "权重解释", "type": "enum", "group": "设计参数",
+      "default": "amplitude",
+      "options": [
+        { "value": "amplitude", "label": "振幅" },
+        { "value": "power", "label": "功率（先开平方）" }
+      ],
+      "help": "数据集标签用振幅；若你手上的数是各模式功率占比，选功率。"
+    },
+    {
+      "key": "fiber_core_um", "label": "纤芯半径", "type": "number", "group": "设计参数",
+      "default": 5.0, "unit": "µm", "min": 1, "max": 50, "step": 0.1, "advanced": true,
+      "help": "模式基底用的光纤芯半径（数据集为 5 µm）。"
+    },
+    {
+      "key": "fiber_na", "label": "数值孔径 NA", "type": "number", "group": "设计参数",
+      "default": 0.1, "unit": "", "min": 0.02, "max": 0.5, "step": 0.005, "advanced": true,
+      "sweepable": true, "sweep": { "min": 0.06, "max": 0.16, "step": 0.01 },
+      "help": "决定支持哪些 LP 模式（V = 2πa·NA/λ）。"
+    },
+    {
+      "key": "mode_basis_nm", "label": "模式基底波长", "type": "number", "group": "设计参数",
+      "default": 632.8, "unit": "nm", "min": 400, "max": 1100, "step": 0.1, "advanced": true,
+      "help": "数据集构建模式基底时用的参考波长（632.8 nm），与实验激光波长相互独立。"
+    },
+    {
+      "key": "zone_size_um", "label": "模式计算窗口", "type": "number", "group": "设计参数",
+      "default": 100.0, "unit": "µm", "min": 20, "max": 400, "step": 5, "advanced": true,
+      "help": "模式场计算窗口边长；窗口内芯径占比决定光斑在相机平面上的相对尺寸。"
+    },
+    {
+      "key": "grid_n", "label": "模式网格点数", "type": "int", "group": "设计参数",
+      "default": 600, "unit": "px", "min": 128, "max": 1600, "step": 32, "advanced": true,
+      "help": "越大模式边缘越平滑，但插值耗时增加。"
+    }
+  ]
+}

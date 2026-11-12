@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CGH 工具箱</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#pane-sim">跳到主区</a>
+
+  <header class="topbar">
+    <button class="icon-btn hamburger" id="btn-drawer" type="button" title="展开或收起参数面板" aria-controls="side" aria-expanded="false">
+      <span aria-hidden="true">≡</span><span class="sr-only">参数面板</span>
+    </button>
+
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"><span class="brand-core"></span></span>
+      <div class="brand-text">
+        <p class="eyebrow">设计包驱动 · 相位型 CGH</p>
+        <h1>CGH 工具箱</h1>
+      </div>
+    </div>
+
+    <div class="topbar-center">
+      <span class="badge" id="badge-python" title="Python 运行时状态"><span class="dot"></span>Python 检查中</span>
+      <span class="badge" id="badge-packs" title="已扫描到的设计包数量">设计包 —</span>
+      <label class="pack-field">
+        <span class="sr-only">当前设计包</span>
+        <select id="pack-select" title="切换设计包"></select>
+      </label>
+      <button class="btn ghost" id="btn-rescan" type="button" title="重新扫描 designs 目录（POST /api/packs/reload）">重新扫描</button>
+    </div>
+
+    <div class="topbar-actions">
+      <button class="btn ghost" id="btn-env" type="button" title="检查本机 Python / numpy / 内存 / 目录权限（GET /api/env）">环境自检</button>
+      <button class="btn ghost" id="btn-prompt" type="button" title="整理脚本提示词：MATLAB 版 / 通用版，一键复制给 AI">整理脚本提示词</button>
+      <button class="btn primary" id="btn-run" type="button" title="按当前参数生成并仿真（POST /api/run）">开始计算</button>
+      <button class="btn danger" id="btn-cancel" type="button" title="取消当前任务（POST /api/job/{id}/cancel）" hidden>取消</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="side" id="side" aria-label="参数面板">
+      <button class="drawer-close" id="btn-drawer-close" type="button" title="收起参数面板">
+        <span>参数面板</span><span aria-hidden="true">收起 ×</span>
+      </button>
+      <div class="side-body" id="side-body"></div>
+    </aside>
+    <div class="scrim" id="scrim" aria-hidden="true"></div>
+
+    <section class="main" aria-label="主视图">
+      <nav class="tabs" role="tablist" aria-label="视图切换">
+        <button class="tab active" id="tab-sim" type="button" role="tab" data-tab="sim" aria-selected="true" aria-controls="pane-sim" title="仿真结果视图">仿真</button>
+        <button class="tab" id="tab-sweep" type="button" role="tab" data-tab="sweep" aria-selected="false" aria-controls="pane-sweep" title="参数扫描与自动择优">参数扫描</button>
+        <button class="tab" id="tab-optimize" type="button" role="tab" data-tab="optimize" aria-selected="false" aria-controls="pane-optimize" title="按一级相似系数自动寻优">自动优化</button>
+      </nav>
+
+      <section class="pane" id="pane-sim" role="tabpanel" aria-labelledby="tab-sim">
+        <div class="summary" id="summary" aria-label="派生量摘要"></div>
+
+        <div class="jobbar" id="jobbar" hidden aria-live="polite">
+          <div class="jobbar-row">
+            <strong id="jobbar-title">计算中</strong>
+            <span class="mono" id="jobbar-pct">0%</span>
+          </div>
+          <div class="bar"><span id="jobbar-fill"></span></div>
+          <p class="jobbar-msg" id="jobbar-msg"></p>
+        </div>
+
+        <div class="empty-card" id="sim-empty">
+          <h2>尚未计算</h2>
+          <p>在左侧调好参数后点「开始计算」，这里会显示近场 / 远场相机图与指标。</p>
+          <p class="muted">当前设计包：<span class="mono" id="empty-pack">—</span></p>
+        </div>
+
+        <div id="sim-results" hidden>
+          <section class="card">
+            <div class="card-head">
+              <div>
+                <h2>应填的两个数值</h2>
+                <p class="sub">每张卡片可切换成任意指标，选择记在本机。</p>
+              </div>
+            </div>
+            <div class="bigcards" id="bigcards"></div>
+          </section>
+
+          <section class="card">
+            <div class="card-head">
+              <div>
+                <h2>一级与理想一级的差距</h2>
+                <p class="sub">自动判断差距来自照明覆盖还是分辨率极限，而不是编码错误。</p>
+              </div>
+              <span class="badge-soft mono" id="diag-summary"></span>
+            </div>
+            <div class="diag-body" id="diag-body"></div>
+          </section>
+
+          <section class="card">
+            <div class="card-head">
+              <div>
+                <h2>指标表</h2>
+                <p class="sub">近场 / 远场同字段对照。</p>
+              </div>
+              <button class="btn ghost sm" id="btn-copy-csv" type="button" title="把指标表复制为 CSV 文本">复制为 CSV</button>
+            </div>
+            <div class="table-wrap">
+              <table class="data-table" id="metrics-table"></table>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="card-head">
+              <div>
+                <h2>仿真图像</h2>
+                <p class="sub">强度按 vmax 归一化后套色标；轴标签为物理坐标（mm）。</p>
+              </div>
+              <div class="display-controls">
+                <label class="ctl">色标
+                  <select id="sel-cmap" title="色标（gray / jet）">
+                    <option value="gray">gray</option>
+                    <option value="jet">jet</option>
+                  </select>
+                </label>
+                <label class="ctl">尺度
+                  <select id="sel-scale" title="强度映射：线性 / 对数">
+                    <option value="linear">线性</option>
+                    <option value="log">对数</option>
+                  </select>
+                </label>
+                <label class="ctl">归一化
+                  <select id="sel-vmax" title="按全图峰值归一化，或只按 0/+1 评价窗口内的峰值归一化">
+                    <option value="window">窗口内</option>
+                    <option value="full">全图</option>
+                  </select>
+                </label>
+                <label class="ctl gamma">γ
+                  <input id="rng-gamma" type="range" min="0.2" max="2" step="0.05" value="0.7" title="显示 gamma（不改变物理量）">
+                  <span class="mono" id="gamma-val">0.70</span>
+                </label>
+              </div>
+            </div>
+            <div class="image-grid" id="image-grid"></div>
+          </section>
+
+          <section class="card" id="artifacts-card" hidden>
+            <div class="card-head">
+              <div>
+                <h2>产物</h2>
+                <p class="sub">输出目录与可直接下载的文件。</p>
+              </div>
+            </div>
+            <p class="path mono" id="artifact-dir"></p>
+            <div class="links" id="artifact-links"></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="pane" id="pane-sweep" role="tabpanel" aria-labelledby="tab-sweep" hidden>
+        <section class="card">
+          <div class="card-head">
+            <div>
+              <h2>扫描参数</h2>
+              <p class="sub">只列出 schema 中标记为 sweepable 的参数。</p>
+            </div>
+            <span class="badge" id="sweep-estimate">预计 0 次计算</span>
+          </div>
+          <div class="axis-list" id="axis-list"></div>
+        </section>
+
+        <section class="card">
+          <div class="card-head">
+            <div>
+              <h2>评分与运行</h2>
+              <p class="sub">按评分方向自动取最优组合。</p>
+            </div>
+          </div>
+          <div class="sweep-form">
+            <label class="ctl">评分指标
+              <select id="sweep-metric" title="扫描评分指标（契约 §9.2）"></select>
+            </label>
+            <label class="ctl">方向
+              <select id="sweep-direction" title="最大化或最小化评分">
+                <option value="max">最大化</option>
+                <option value="min">最小化</option>
+              </select>
+            </label>
+            <label class="ctl">质量
+              <select id="sweep-quality" title="fast = 半分辨率 + 单精度 + 不存 BMP">
+                <option value="fast">fast（半分辨率）</option>
+                <option value="full">full</option>
+              </select>
+            </label>
+            <button class="btn primary" id="btn-sweep" type="button" title="提交参数扫描（POST /api/sweep）">运行扫描</button>
+          </div>
+          <div class="progress-row" id="sweep-progress" hidden aria-live="polite">
+            <div class="bar"><span id="sweep-progress-fill"></span></div>
+            <p class="progress-text" id="sweep-progress-text"></p>
+          </div>
+        </section>
+
+        <section class="card" id="sweep-result-card" hidden>
+          <div class="card-head">
+            <div>
+              <h2>扫描结果</h2>
+              <p class="sub" id="sweep-summary"></p>
+            </div>
+            <button class="btn ghost sm" id="btn-sweep-csv" type="button" title="导出当前排序的扫描结果为 CSV">导出 CSV</button>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table sweep-table" id="sweep-table"></table>
+          </div>
+        </section>
+      </section>
+
+      <section class="pane" id="pane-optimize" role="tabpanel" aria-labelledby="tab-optimize" hidden>
+        <section class="card health-card" id="opt-startpoint" hidden></section>
+
+        <section class="card">
+          <div class="card-head">
+            <div>
+              <h2>选择可变参数</h2>
+              <p class="sub">
+                目标函数是「一级 vs 理想一级」的强度相关系数；勾选后由坐标模式搜索逐轮试探。
+                标「推荐」的变量改动代价最低、收益最直接。
+              </p>
+            </div>
+            <span class="badge" id="opt-estimate">已选 0 个变量</span>
+          </div>
+          <div class="axis-list" id="opt-var-list"></div>
+          <details class="opt-excluded" id="opt-excluded">
+            <summary>为什么有些参数不能勾？</summary>
+            <ul class="opt-excluded-list" id="opt-excluded-list"></ul>
+          </details>
+        </section>
+
+        <section class="card">
+          <div class="card-head">
+            <div>
+              <h2>目标与预算</h2>
+              <p class="sub">先用单变量探测定位方向，再做坐标模式搜索；无改进时步长减半。</p>
+            </div>
+          </div>
+          <div class="sweep-form">
+            <label class="ctl">评价函数
+              <select id="opt-objective" title="目标函数：一级与理想一级的相似系数"></select>
+            </label>
+            <label class="ctl">质量
+              <select id="opt-quality" title="fast = 半分辨率 + 单精度；full = 全分辨率">
+                <option value="fast">fast（快）</option>
+                <option value="full">full（准）</option>
+              </select>
+            </label>
+            <label class="ctl">评估上限
+              <input class="input mono" id="opt-budget" type="number" min="6" max="400" step="1" value="40" title="最多调用多少次仿真（重复组合会自动跳过）">
+            </label>
+            <label class="ctl check-line" title="结束后用 full 档把基线与最优各重算一次，报告 fast 估计与 full 实测的差">
+              <input type="checkbox" id="opt-verify" checked>
+              <span>full 档复核</span>
+            </label>
+            <button class="btn primary" id="btn-optimize" type="button" title="提交优化任务（POST /api/optimize）">开始优化</button>
+          </div>
+          <div class="progress-row" id="opt-progress" hidden aria-live="polite">
+            <div class="bar"><span id="opt-progress-fill"></span></div>
+            <p class="progress-text" id="opt-progress-text"></p>
+          </div>
+        </section>
+
+        <section class="card" id="opt-result-card" hidden>
+          <div class="card-head">
+            <div>
+              <h2>优化结果</h2>
+              <p class="sub" id="opt-summary"></p>
+            </div>
+            <button class="btn primary sm" id="btn-opt-apply" type="button" title="把最优参数回填到左侧面板（不会自动保存）">应用最优参数</button>
+          </div>
+          <p class="opt-bounds" id="opt-bounds" hidden></p>
+          <div class="opt-notes" id="opt-notes"></div>
+          <div class="opt-best" id="opt-best"></div>
+          <div class="opt-chart" id="opt-chart" aria-label="相似系数随评估次数的变化"></div>
+          <details class="opt-history">
+            <summary id="opt-history-summary">逐次评估记录</summary>
+            <div class="table-wrap">
+              <table class="data-table opt-table" id="opt-table"></table>
+            </div>
+          </details>
+        </section>
+      </section>
+    </section>
+  </main>
+
+  <div class="toast-stack" id="toasts" aria-live="assertive"></div>
+
+  <div class="modal" id="modal" hidden>
+    <div class="modal-backdrop" data-close="1"></div>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="modal-head">
+        <div>
+          <h2 id="modal-title">设计包脚本规范</h2>
+          <p class="sub mono" id="modal-path"></p>
+        </div>
+        <button class="icon-btn" id="modal-close" type="button" title="关闭弹窗" aria-label="关闭弹窗">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="prompt-tabs" id="prompt-tabs"></div>
+        <div class="prompt-doc" id="modal-body"></div>
+      </div>
+      <div class="modal-foot">
+        <span class="muted" id="modal-note">来自 GET /api/prompt</span>
+        <button class="btn ghost" id="modal-copy" type="button" title="复制全文到剪贴板">复制全文</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="env-modal" hidden>
+    <div class="modal-backdrop" data-close="1"></div>
+    <div class="modal-card wide" role="dialog" aria-modal="true" aria-labelledby="env-title">
+      <div class="modal-head">
+        <div>
+          <h2 id="env-title">环境自检</h2>
+          <p class="sub" id="env-sub">每次开始计算前都会自动检查；失败项按下面的步骤处理后再点「重新自检」。</p>
+        </div>
+        <button class="icon-btn" id="env-close" type="button" title="关闭" aria-label="关闭环境自检">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="env-summary" id="env-summary"></div>
+        <ul class="env-list" id="env-list"></ul>
+      </div>
+      <div class="modal-foot">
+        <span class="muted mono" id="env-note"></span>
+        <div class="modal-actions">
+          <button class="btn ghost" id="env-recheck" type="button" title="重新执行全部检查">重新自检</button>
+          <button class="btn primary" id="env-close-btn" type="button" title="关闭窗口">关闭</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="confirm" hidden>
+    <div class="modal-backdrop" data-close="1"></div>
+    <div class="modal-card narrow" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+      <div class="modal-head">
+        <h2 id="confirm-title">确认</h2>
+      </div>
+      <div class="modal-body">
+        <p class="confirm-msg" id="confirm-msg"></p>
+      </div>
+      <div class="modal-foot">
+        <div class="modal-actions">
+          <button class="btn ghost" id="confirm-no" type="button" title="取消操作">取消</button>
+          <button class="btn primary" id="confirm-yes" type="button" title="确认操作">确定</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

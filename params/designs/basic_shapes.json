@@ -1,0 +1,8 @@
+{
+  "shape": "ring",
+  "waist_mm": 0.55,
+  "ring_radius_mm": 1.08,
+  "ring_width_mm": 0.35,
+  "charge": 1,
+  "aperture_mm": 2.5
+}
